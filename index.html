@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- Ensures optimal rendering on mobile devices. -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" /> <!-- Optimal Internet Explorer compatibility -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+
+</head>
+
+<body>
+
+  <script src="https://www.paypalobjects.com/api/checkout.js"></script>
+
+  <div class="alert alert-success" id="success" role="alert">
+    Your payment was succesful
+  </div>
+
+  <div class="alert alert-danger" id="error" role="alert">
+    There was an error while processing your payment. Please try again.
+  </div>
+
+  <div class="alert alert-primary" id="cancel" role="alert">
+    Your order was cancelled. No payment was issued.
+  </div>
+
+  <div class="container-fluid">
+    <div class="form-group">
+      <label for="total">Total amount (USD)</label>
+      <input type="email" class="form-control" id="total" aria-describedby="totalAmount">
+    </div>
+  </div>
+  <div id="paypal-button"></div>
+
+
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+
+  <script>
+
+    var endpoint = "http://localhost:5000/api/";
+
+    $(".alert").hide();
+
+    paypal.Button.render({
+      env: 'sandbox', // Or 'production'
+      payment: function(data, actions) {
+        $(".alert").hide();
+        var total = $("#total").val()
+        return actions.request.post(endpoint + "payment", {total: total})
+          .then(function(res) {
+            return res.id;
+          })
+          .catch(function(error){
+            $("#error").show();
+            console.log(error);
+          });
+      },
+      onAuthorize: function(data, actions) {
+        return actions.request.post(endpoint + "execute", {
+          paymentID: data.paymentID,
+          payerID:   data.payerID
+        })
+          .then(function(res) {
+            if ("state" in res && res.state === "approved"){
+              $("#success").show();
+            }else{
+              $("#error").show();
+              console.error(res)
+            }
+          })
+          .catch(function(error){
+            $("#error").show();            
+            console.error(error);
+          });
+      },
+      onCancel: function (data, actions) {
+        $("#cancel").show();
+      },
+      onError: function (err) {
+        $("#error").show();    
+      }
+    }, ('#paypal-button'));
+
+  </script>
+
+
+</body>
+
+
