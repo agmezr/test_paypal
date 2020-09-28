@@ -108,7 +108,7 @@ class PaypalTest(unittest.TestCase):
         mock_post.return_value = mock_request
         with mock.patch.object(redis_client, 'get') as mock_redis:
             mock_redis.side_effect = ['some token', b'1900-01-01 00:00:00.0', b'token']
-            response = paypal.make_payment(10)
+            response = paypal.create_order(10)
             mock_redis.assert_called()
             mock_token.assert_called()
             self.assertEqual(response, MOCK_PAYMENT_RESPONSE)
@@ -121,39 +121,38 @@ class PaypalTest(unittest.TestCase):
         mock_post.return_value = mock_request
         with mock.patch.object(redis_client, 'get') as mock_redis:
             mock_redis.side_effect = ['some token', b'1900-01-01 00:00:00.0', b'token']
-            response = paypal.execute_payment('id', 'id2')
+            response = paypal.capture_order('id')
             mock_redis.assert_called()
             mock_token.assert_called()
             self.assertEqual(response, MOCK_PAYMENT_RESPONSE)
 
-    @mock.patch.object(paypal, 'make_payment')
+    @mock.patch.object(paypal, 'create_order')
     def test_make_payment_endpoint(self, mock_payment):
         """Tests endpoint to make payment for Paypal API."""
         mock_payment.return_value = MOCK_PAYMENT_RESPONSE
         with app.test_client() as client:
-            endpoint = "api/payment"
-            rv = client.post(endpoint, data={"total": 12})
+            endpoint = "api/paypal/order/create"
+            rv = client.post(endpoint, json={"total": 12})
             data = json.loads(rv.data)
             self.assertEqual(rv.status_code, 200)
             self.assertEqual(data, MOCK_PAYMENT_RESPONSE)
 
-    @mock.patch.object(paypal, 'make_payment')
+    @mock.patch.object(paypal, 'create_order')
     def test_execute_payment_invalid_amount(self, mock_payment):
         """Tests endpoint payment for Paypal API with an invalid amount."""
         mock_payment.return_value = MOCK_PAYMENT_RESPONSE
         with app.test_client() as client:
-            endpoint = "api/payment"
-            rv = client.post(endpoint, data={"total": -1})
-            data = json.loads(rv.data)
+            endpoint = "api/paypal/order/create"
+            rv = client.post(endpoint, json={"total": -1})
             self.assertEqual(rv.status_code, 500)
 
-    @mock.patch.object(paypal, 'execute_payment')
+    @mock.patch.object(paypal, 'capture_order')
     def test_execute_payment_endpoint(self, mock_payment):
         """Tests endpoint to execute payment for Paypal API."""
         mock_payment.return_value = MOCK_EXECUTE_RESPONSE
         with app.test_client() as client:
-            endpoint = "api/execute"
-            rv = client.post(endpoint, data={'paymentID': 123, 'payerID': 123})
+            endpoint = "api/paypal/order/capture"
+            rv = client.post(endpoint, json={'orderID': 123})
             data = json.loads(rv.data)
             self.assertEqual(rv.status_code, 200)
             self.assertEqual(data, MOCK_EXECUTE_RESPONSE)

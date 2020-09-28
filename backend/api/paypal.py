@@ -64,40 +64,30 @@ def validate_token(fn):
 
 
 @validate_token
-def make_payment(subtotal):
+def create_order(total):
     """Sends payment to Paypal API."""
     access_token = redis_client.get(PAYPAL_TOKEN).decode("utf-8")
-    endpoint = f"{PAYPAL_API}/v1/payments/payment"
+    endpoint = f"{PAYPAL_API}/v2/checkout/orders"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {access_token}",
     }
-    shipping = 0.30
-    total = subtotal + shipping
-
     data = {
-        "intent": "sale",
-        "payer": {"payment_method": "paypal"},
-        "transactions": [
+        "intent": "CAPTURE",
+        "purchase_units": [
             {
                 "amount": {
-                    "total": total,
-                    "currency": "USD",
-                    "details": {
-                        "subtotal": subtotal,
-                        "tax": "0.00",
-                        "shipping": shipping,
-                    },
+                    "value": total,
+                    "currency_code": "USD",
                 },
-                "description": "The payment transaction description.",
-                "custom": "ALEX_TEST_12345",
+                "description": "This is a test of capture.",
                 "item_list": {
                     "items": [
                         {
                             "name": "An item",
                             "description": "Some random item.",
                             "quantity": "1",
-                            "price": subtotal,
+                            "price": total,
                             "tax": "0.00",
                             "sku": "1",
                             "currency": "USD",
@@ -118,15 +108,14 @@ def make_payment(subtotal):
 
 
 @validate_token
-def execute_payment(payment_id, payer_id):
+def capture_order(order_id):
     """Executes the payment in Paypal API."""
-    endpoint = f"{PAYPAL_API}/v1/payments/payment/{payment_id}/execute"
+    endpoint = f"{PAYPAL_API}/v2/checkout/orders/{order_id}/capture"
     access_token = redis_client.get(PAYPAL_TOKEN).decode("utf-8")
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {access_token}",
     }
-    data = {"payer_id": payer_id}
-    response = requests.post(endpoint, headers=headers, json=data)
+    response = requests.post(endpoint, headers=headers)
 
     return response.json()

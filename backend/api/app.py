@@ -28,10 +28,10 @@ app.logger.debug(f"App initialized using env: {env}")
 from api import paypal
 
 
-@app.route("/api/payment", methods=["POST"])
-def payment():
-    """Endpoint to return the current exchange_rate."""
-    data = flask.request.form
+@app.route("/api/paypal/order/create", methods=["POST"])
+def order():
+    """Endpoint to order a payment from the Paypal API."""
+    data = flask.request.json
     data_total = data.get("total", -1)
     if data_total:
         total = float(data_total)
@@ -40,15 +40,15 @@ def payment():
 
     if total <= 0:
         return {"msg": "Total should be a positive number"}, 500
-    response = paypal.make_payment(total)
+    response = paypal.create_order(total)
     app.logger.debug(response)
     return response
 
 
-@app.route("/api/execute", methods=["POST"])
-def execute():
-    """Endpoint to return the current exchange_rate."""
-    data = flask.request.form
-    response = paypal.execute_payment(data["paymentID"], data["payerID"])
+@app.route("/api/paypal/order/capture", methods=["POST"])
+def capture():
+    """Endpoint to capture a payment from the Paypal API."""
+    data = flask.request.json
+    response = paypal.capture_order(data["orderID"])
     app.logger.debug(response)
     return response
